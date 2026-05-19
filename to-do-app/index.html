@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gerenciador de tarefas pessoal, organize seu trabalho, estudos e vida pessoal.">
+    <title>TaskFlow — Gerenciador de Tarefas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: #0f172a;
+            background-image:
+                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 50%);
+            color: #f8fafc;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Glass card base */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        /* Input de tema escuro */
+        .input-dark {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #f8fafc;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+        }
+        .input-dark:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+            background: rgba(15, 23, 42, 0.9);
+        }
+        .input-dark::placeholder { color: #475569; }
+        .input-dark option { background: #1e293b; color: #f8fafc; }
+
+        /* Botão primário */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px -4px rgba(59, 130, 246, 0.55);
+            filter: brightness(1.1);
+        }
+        .btn-primary:active { transform: translateY(0); }
+
+        /* Botão de perigo */
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            transition: background 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        /* Botão neutro */
+        .btn-neutral {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #94a3b8;
+            transition: background 0.2s ease, color 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-neutral:hover { background: rgba(71, 85, 105, 0.8); color: #f1f5f9; }
+
+        /* Gerenciamento de telas */
+        .hidden-screen { display: none !important; }
+
+        /* Animação de entrada */
+        .fade-in {
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card de tarefa */
+        .task-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-left: 3px solid transparent;
+            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .task-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .task-card.work  { border-left-color: #3b82f6; }
+        .task-card.personal { border-left-color: #8b5cf6; }
+        .task-card.study { border-left-color: #10b981; }
+        .task-card.done  {
+            opacity: 0.5;
+            border-left-color: #475569 !important;
+            filter: grayscale(0.3);
+        }
+
+        /* Badges de tipo */
+        .badge-work    { background: rgba(59,130,246,0.18); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+        .badge-personal{ background: rgba(139,92,246,0.18); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
+        .badge-study   { background: rgba(16,185,129,0.18); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+
+        /* Texto riscado para tarefas concluídas */
+        .task-done-title { text-decoration: line-through; color: #64748b; }
+
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15,23,42,0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.4); border-radius: 3px; }
+
+        /* Textarea sem resize horizontal */
+        textarea { resize: vertical; }
+
+        /* Contador de estatísticas */
+        .stat-card {
+            background: rgba(15,23,42,0.5);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Botões de filtro */
+        .filter-btn {
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            padding-top: 0.375rem;
+            padding-bottom: 0.375rem;
+        }
+        .filter-btn:hover { color: #94a3b8; background: rgba(255,255,255,0.04); }
+        .filter-btn.active { background: rgba(59,130,246,0.18); color: #93c5fd; }
+
+        /* Barra de progresso */
+        .progress-track {
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            border-radius: 999px;
+            transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║          TELA DE LOGIN               ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md glass-card rounded-2xl p-8 fade-in">
+
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-4">
+                <svg class="w-7 h-7 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight text-white mb-1">TaskFlow</h1>
+            <p class="text-slate-400 text-sm">Entre na sua conta para continuar</p>
+        </div>
+
+        <form id="login-form" class="space-y-5" novalidate>
+            <div>
+                <label for="login-email" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">E-mail</label>
+                <input type="email" id="login-email" class="w-full px-4 py-3 rounded-xl input-dark text-sm" placeholder="seu@email.com" autocomplete="email">
+            </div>
+            <div>
+                <label for="login-password" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Senha</label>
+                <input type="password" id="login-password" class="w-full px-4 py-3 rounded-xl input-dark text-sm" placeholder="••••••••" autocomplete="current-password">
+            </div>
+
+            <div id="login-error" class="hidden text-sm font-medium bg-rose-500/10 border border-rose-500/20 text-rose-300 p-3 rounded-xl text-center"></div>
+
+            <button type="submit" id="login-submit-btn" class="btn-primary w-full text-white font-semibold py-3.5 rounded-xl text-sm shadow-lg">
+                Entrar na conta
+            </button>
+        </form>
+
+        <p class="mt-8 text-center text-slate-500 text-sm">
+            Não tem conta?
+            <a href="#" id="go-to-register" class="text-blue-400 hover:text-blue-300 font-medium transition-colors underline underline-offset-4 decoration-blue-500/40 ml-1">Cadastre-se</a>
+        </p>
+    </div>
+</div>
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║          TELA DE CADASTRO            ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div id="register-screen" class="min-h-screen flex items-center justify-center p-4 hidden-screen">
+    <div class="w-full max-w-md glass-card rounded-2xl p-8 fade-in">
+
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
+                <svg class="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold tracking-tight text-white mb-1">Criar Conta</h2>
+            <p class="text-slate-400 text-sm">Organize sua vida em minutos</p>
+        </div>
+
+        <form id="register-form" class="space-y-5" novalidate>
+            <div>
+                <label for="register-name" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Nome completo</label>
+                <input type="text" id="register-name" class="w-full px-4 py-3 rounded-xl input-dark text-sm" placeholder="Como devemos chamar você?">
+            </div>
+            <div>
+                <label for="register-email" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">E-mail</label>
+                <input type="email" id="register-email" class="w-full px-4 py-3 rounded-xl input-dark text-sm" placeholder="seu@email.com">
+            </div>
+            <div>
+                <label for="register-password" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Senha</label>
+                <input type="password" id="register-password" class="w-full px-4 py-3 rounded-xl input-dark text-sm" placeholder="Mínimo de 6 caracteres">
+            </div>
+
+            <div id="register-error" class="hidden text-sm font-medium bg-rose-500/10 border border-rose-500/20 text-rose-300 p-3 rounded-xl text-center"></div>
+
+            <button type="submit" id="register-submit-btn" class="btn-primary w-full text-white font-semibold py-3.5 rounded-xl text-sm shadow-lg">
+                Criar minha conta
+            </button>
+        </form>
+
+        <p class="mt-8 text-center text-slate-500 text-sm">
+            Já tem conta?
+            <a href="#" id="go-to-login" class="text-blue-400 hover:text-blue-300 font-medium transition-colors underline underline-offset-4 decoration-blue-500/40 ml-1">Fazer login</a>
+        </p>
+    </div>
+</div>
+
+<!-- ╔══════════════════════════════════════╗ -->
+<!-- ║            DASHBOARD                 ║ -->
+<!-- ╚══════════════════════════════════════╝ -->
+<div id="dashboard-screen" class="min-h-screen hidden-screen">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 border-b border-white/[0.06]" style="background: rgba(15,23,42,0.85); backdrop-filter: blur(20px);">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <span class="font-bold text-white tracking-tight">TaskFlow</span>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Olá,</p>
+                    <p id="user-greeting" class="text-sm font-semibold text-white leading-none mt-0.5">Usuário</p>
+                </div>
+                <button id="logout-btn" class="btn-neutral px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    <span class="hidden sm:inline">Sair</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo principal -->
+    <main class="max-w-5xl mx-auto px-6 py-8">
+
+        <!-- Estatísticas rápidas -->
+        <div id="stats-bar" class="grid grid-cols-3 gap-4 mb-8">
+            <div class="stat-card rounded-xl p-4 text-center">
+                <p class="text-2xl font-bold text-white" id="stat-total">0</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wider">Total</p>
+            </div>
+            <div class="stat-card rounded-xl p-4 text-center">
+                <p class="text-2xl font-bold text-emerald-400" id="stat-done">0</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wider">Concluídas</p>
+            </div>
+            <div class="stat-card rounded-xl p-4 text-center">
+                <p class="text-2xl font-bold text-blue-400" id="stat-pending">0</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wider">Pendentes</p>
+            </div>
+        </div>
+
+        <!-- Formulário de nova/editar tarefa -->
+        <section class="glass-card rounded-2xl p-6 mb-8">
+            <h2 id="form-title" class="text-base font-semibold text-white mb-5 flex items-center gap-2">
+                <svg id="form-icon" class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Nova Tarefa
+            </h2>
+
+            <form id="todo-form" class="space-y-4" novalidate>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-1">
+                        <label for="todo-title" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Título <span class="text-rose-400">*</span></label>
+                        <input type="text" id="todo-title" class="w-full px-4 py-3 rounded-xl input-dark text-sm" placeholder="O que precisa ser feito?">
+                    </div>
+                    <div class="sm:col-span-1">
+                        <label for="todo-type" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Tipo</label>
+                        <select id="todo-type" class="w-full px-4 py-3 rounded-xl input-dark text-sm cursor-pointer">
+                            <option value="work">💼 Trabalho</option>
+                            <option value="personal">✨ Pessoal</option>
+                            <option value="study">📚 Estudos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="todo-description" class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Descrição <span class="text-slate-600 normal-case font-normal">(opcional)</span></label>
+                    <textarea id="todo-description" rows="2" class="w-full px-4 py-3 rounded-xl input-dark text-sm" placeholder="Adicione mais detalhes sobre esta tarefa..."></textarea>
+                </div>
+
+                <div id="todo-error" class="hidden text-sm font-medium bg-rose-500/10 border border-rose-500/20 text-rose-300 p-3 rounded-xl text-center"></div>
+
+                <div class="flex items-center justify-end gap-3">
+                    <button type="button" id="cancel-edit-btn" class="hidden btn-neutral px-5 py-3 rounded-xl text-sm font-medium">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="todo-submit-btn" class="btn-primary text-white font-semibold px-6 py-3 rounded-xl text-sm flex items-center gap-2">
+                        <svg id="submit-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span id="submit-label">Adicionar Tarefa</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Listagem de tarefas -->
+        <section>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                <h2 class="text-base font-semibold text-white flex items-center gap-2">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                    </svg>
+                    Suas Tarefas
+                    <span id="filter-count" class="text-xs font-normal text-slate-500"></span>
+                </h2>
+            </div>
+
+            <!-- Barra de filtros e busca -->
+            <div class="glass-card rounded-xl p-4 mb-5 space-y-3">
+                <!-- Busca -->
+                <div class="relative">
+                    <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+                    </svg>
+                    <input type="text" id="search-input" class="w-full pl-10 pr-4 py-2.5 rounded-lg input-dark text-sm" placeholder="Buscar tarefas...">
+                    <button id="search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Filtros de status e tipo -->
+                <div class="flex flex-wrap gap-2">
+                    <!-- Status -->
+                    <div class="flex rounded-lg overflow-hidden border border-white/[0.08]">
+                        <button data-filter="status" data-value="all"     class="filter-btn active px-3 py-1.5 text-xs font-semibold transition-colors">Todas</button>
+                        <button data-filter="status" data-value="pending"  class="filter-btn px-3 py-1.5 text-xs font-semibold transition-colors border-l border-white/[0.08]">Pendentes</button>
+                        <button data-filter="status" data-value="done"     class="filter-btn px-3 py-1.5 text-xs font-semibold transition-colors border-l border-white/[0.08]">Concluídas</button>
+                    </div>
+
+                    <!-- Tipo -->
+                    <div class="flex rounded-lg overflow-hidden border border-white/[0.08]">
+                        <button data-filter="type" data-value="all"      class="filter-btn active px-3 py-1.5 text-xs font-semibold transition-colors">Todos</button>
+                        <button data-filter="type" data-value="work"     class="filter-btn px-3 py-1.5 text-xs font-semibold transition-colors border-l border-white/[0.08]">Trabalho</button>
+                        <button data-filter="type" data-value="personal" class="filter-btn px-3 py-1.5 text-xs font-semibold transition-colors border-l border-white/[0.08]">Pessoal</button>
+                        <button data-filter="type" data-value="study"    class="filter-btn px-3 py-1.5 text-xs font-semibold transition-colors border-l border-white/[0.08]">Estudos</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="todo-list" class="space-y-3">
+                <!-- Tarefas injetadas via JS -->
+            </div>
+
+            <!-- Empty state (sem tarefas cadastradas) -->
+            <div id="empty-state" class="hidden py-16 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800/60 border border-slate-700 mb-4">
+                    <svg class="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <p class="text-slate-400 font-medium">Nenhuma tarefa cadastrada ainda.</p>
+                <p class="text-slate-600 text-sm mt-1">Use o formulário acima para começar!</p>
+            </div>
+
+            <!-- Empty state (filtro sem resultados) -->
+            <div id="empty-filter-state" class="hidden py-16 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800/60 border border-slate-700 mb-4">
+                    <svg class="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+                    </svg>
+                </div>
+                <p class="text-slate-400 font-medium">Nenhuma tarefa encontrada.</p>
+                <p class="text-slate-600 text-sm mt-1">Tente ajustar os filtros ou a busca.</p>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- Toast de notificação -->
+<div id="toast" class="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-xl text-sm font-semibold shadow-2xl translate-y-16 opacity-0 pointer-events-none transition-all duration-300" aria-live="polite">
+    <svg id="toast-icon" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"></svg>
+    <span id="toast-message"></span>
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+    <div class="glass-card w-full max-w-sm rounded-2xl p-6 fade-in">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/25 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-white text-sm">Excluir tarefa</h3>
+                <p class="text-slate-400 text-xs mt-0.5">Esta ação não pode ser desfeita.</p>
+            </div>
+        </div>
+        <p class="text-slate-300 text-sm mb-6">Tem certeza que deseja excluir a tarefa <strong id="confirm-task-name" class="text-white"></strong>?</p>
+        <div class="flex gap-3">
+            <button id="confirm-cancel-btn" class="btn-neutral flex-1 py-2.5 rounded-xl text-sm font-semibold">Cancelar</button>
+            <button id="confirm-delete-btn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-colors">Excluir</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

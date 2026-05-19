@@ -1,0 +1,32 @@
+# settings.py
+
+# Screen settings
+WIDTH = 800
+HEIGHT = 600
+FPS = 60
+
+# Colors (R, G, B)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+
+# Ship settings
+SHIP_WIDTH = 40
+SHIP_HEIGHT = 30
+SHIP_SPEED = 5
+SHIP_COLOR = GREEN
+
+# Bullet settings
+BULLET_WIDTH = 4
+BULLET_HEIGHT = 15
+BULLET_SPEED = -7
+BULLET_COLOR = WHITE
+
+# Asteroid settings
+ASTEROID_MIN_SIZE = 20
+ASTEROID_MAX_SIZE = 50
+ASTEROID_SPEED_MIN = 2
+ASTEROID_SPEED_MAX = 5
+ASTEROID_SPAWN_RATE = 40 # Lower means faster spawn
+ASTEROID_COLOR = RED
